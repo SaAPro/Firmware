@@ -77,7 +77,23 @@
         "files.insertFinalNewline": true,
         "files.trimTrailingWhitespace": true,
         "files.watcherExclude": {
-                "**/build/*": true
+                "**/build/*": true,
+                "**/.git/objects/**": true,
+                "**/.git/subtree-cache/**": true,
+                "**/.ci/**": true,
+                "**/build/**": true,
+                "**/cmake/**": true,
+                "**/Documentation/**": true,
+                "**/integrationtests/**": true,
+                "**/launch/**": true,
+                "**/mavlink/**": true,
+                "**/msg/**": true,
+                "**/platforms/**": true,
+                "**/posix-configs/**": true,
+                "**/ROMFS/**": true,
+                "**/test/**": true,
+                "**/test_data/**": true,
+                "**/Tools/**": true
         },
         "git.detectSubmodulesLimit": 20,
         "git.ignoreLimitWarning": true,
@@ -165,5 +181,9 @@
         "workbench.editor.highlightModifiedTabs": true,
         "workbench.enableExperiments": false,
         "workbench.settings.enableNaturalLanguageSearch": false,
-        "workbench.statusBar.feedback.visible": false
+        "workbench.statusBar.feedback.visible": false,
+        "python.autoComplete.extraPaths": [
+                "/home/sarazial/catkin_ws/devel/lib/python2.7/dist-packages",
+                "/opt/ros/melodic/lib/python2.7/dist-packages"
+        ]
 }
