@@ -51,10 +51,12 @@
 
 #include "nxpcup_race.h"
 
-#define TURNIGY_BRUSHLESS
+#include <math.h>
+
+#define DFROBOT_BRUSHLESS
 
 #ifdef DFROBOT_BRUSHLESS
-#define RANGE 100
+#define RANGE 300
 #define DIR -1
 
 #endif
@@ -76,6 +78,13 @@ static int daemon_task;             /* Handle of deamon task / thread */
 bool threadShouldExit = false;
 bool threadIsRunning = false;
 
+// Car geometry parameters
+float lw = 0.175; // distance between front and rear wheel axes
+float dw = 0.148; // distance between rear wheels
+float rw = 0.032; // radius of a wheel
+float max_wv = 30; // maximum wheel velocity (rad/s)
+float max_steer = M_PI_4_F; // maximum steering angle (rad)
+
 void roverSteering(float direction, int fd)
 {
 	if (direction < -1) {
@@ -85,7 +94,7 @@ void roverSteering(float direction, int fd)
 		direction = 1;
 	}
 
-	int steer = 1500 - DIR * (int)(500 * direction);
+	int steer = 1000 - DIR * (int)(500 * direction);
 	px4_ioctl(fd, PWM_SERVO_SET(1), steer); // Motor 1 PWM (Steering)
 }
 
@@ -100,14 +109,52 @@ void roverSpeed(float speed, int fd)
 		speed = 1;
 	}
 
-	speed_intern = 1500 + (int)(speed * RANGE);
+	speed_intern = 1475 + (int)(speed * RANGE);
 	px4_ioctl(fd, PWM_SERVO_SET(3), speed_intern); // Motor 3 PWM (Throttle)
 #ifdef DFROBOT_BRUSHED
 	px4_ioctl(fd, PWM_SERVO_SET(4), speed_intern); // Motor 4 PWM (Throttle)
 #endif
 #ifdef DFROBOT_BRUSHLESS
-	px4_ioctl(fd, PWM_SERVO_SET(4), speed_intern); // Motor 4 PWM (Throttle)
+	px4_ioctl(fd, PWM_SERVO_SET(2), speed_intern); // Motor 2 PWM (Throttle)
 #endif
+}
+
+void roverDifferentialControl(float speed, float steer, int fd)
+{
+	int pwm_s, pwm_l, pwm_r;
+	float wv, wl, wr;
+
+	// Add constraints on steering angle
+	if (steer > max_steer) { steer = max_steer; }
+
+	if (steer < -max_steer) { steer = -max_steer; }
+
+	// Wheel velocity
+	wv = speed / rw;
+
+	// Add constraints on wheel velocity
+	if (wv > max_wv) { wv = max_wv; }
+
+	if (wv < -max_wv) { wv = -max_wv; }
+
+	// Differential component for wheel velocity
+	dw = dw * (float)tan(steer) * wv / lw;
+
+	// Compute differential wheel velocity
+	wl = wv + (float)0.5 * dw;
+	wr = wv - (float)0.5 * dw;
+
+	// Mapping wheel velocity (rad/s) -> PWM
+	pwm_l = 1475 + (int)(RANGE * wl / max_wv);
+	pwm_r = 1475 + (int)(RANGE * wr / max_wv);
+
+	// Mapping steer angle (rad) -> PWM
+	pwm_s = 1000 - DIR * (int)(500 * steer / max_steer);
+
+	// Output to px4_ioctl
+	px4_ioctl(fd, PWM_SERVO_SET(1), pwm_s); // Motor 1 PWM (Steering)
+	px4_ioctl(fd, PWM_SERVO_SET(3), pwm_l); // Motor 3 PWM (Throttle)
+	px4_ioctl(fd, PWM_SERVO_SET(2), pwm_r); // Motor 2 PWM (Throttle)
 }
 
 int race_thread_main(int argc, char **argv)
@@ -116,7 +163,7 @@ int race_thread_main(int argc, char **argv)
 
 	/* Rover motor control variables */
 	roverControl motorControl;
-	bool wait  = 1;
+	// bool wait  = 1;
 
 	const char *dev = PWM_OUTPUT0_DEVICE_PATH;
 	int fd = px4_open(dev, 0);
@@ -131,7 +178,7 @@ int race_thread_main(int argc, char **argv)
 	_actuator_armed.prearmed = 1;
 	orb_publish(ORB_ID(actuator_armed), actuator_armed_pub, &_actuator_armed);
 
-	/* Status safet switch request */
+	/* Status safety switch request */
 	struct safety_s safety;
 	uORB::Subscription safety_sub{ORB_ID(safety)};
 	safety_sub.copy(&safety);
@@ -141,27 +188,39 @@ int race_thread_main(int argc, char **argv)
 
 	Pixy2 pixy;
 
-
 	usleep(5000);
 
 	if (pixy.init() == 0) {
 
 		pixy.getVersion();
 		pixy.version->print();
-		usleep(1000);
+		PX4_INFO("Pixy initialized\n");
+		pixy.setLamp(1, 0);
+		pixy.setLED(0, 255, 0);
+		//pixy.line.getAllFeatures(LINE_VECTOR, wait);
+		pixy.getResolution();
+		PX4_INFO("Resolution: (%u, %u)", pixy.frameWidth, pixy.frameHeight);
+
+		pixy.changeProg("line_tracking");
+
+		usleep(1000000);
 
 		while (1) {
 			safety_sub.copy(&safety);
 
-			pixy.line.getAllFeatures(LINE_VECTOR, wait);
+			// pixy.line.getAllFeatures(LINE_VECTOR, wait);
 
 			switch (safety.safety_off) {
 			case 0:
+				pixy.setLED(255, 0, 0);
+
 				motorControl.speed = 0;
 				motorControl.steer = 0;
 				break;
 
 			case 1:
+				pixy.setLED(0, 0, 255);
+
 				start = true;
 
 				if (start) {
@@ -175,11 +234,13 @@ int race_thread_main(int argc, char **argv)
 				break;
 			}
 
-			roverSteering(motorControl.steer, fd);
-			roverSpeed(motorControl.speed, fd);
+			// roverSteering(motorControl.steer, fd);
+			// roverSpeed(motorControl.speed, fd);
+			roverDifferentialControl(motorControl.speed, motorControl.steer, fd);
 
 			if (threadShouldExit) {
 				threadIsRunning = false;
+				pixy.setLamp(0, 0);
 				roverSpeed(0, fd);
 				roverSteering(0, fd);
 				PX4_INFO("Exit NXPCup Race Thread!\n");
