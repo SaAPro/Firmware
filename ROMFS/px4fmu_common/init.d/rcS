@@ -521,6 +521,9 @@ else
 		reboot
 	fi
 
+	# NXPCup autostart
+	nxpcup start
+
 #
 # End of autostart.
 #
