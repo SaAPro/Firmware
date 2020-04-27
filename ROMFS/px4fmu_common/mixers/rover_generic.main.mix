@@ -12,6 +12,8 @@ Inputs to the mixer come from channel group 0 (vehicle attitude), channels 2 (ya
 
 See the README for more information on the scaler format.
 
+Added differential-drive.
+
 
 Output 0
 ---------------------------------------
@@ -22,14 +24,12 @@ Steering mixer using roll on output 1
 M: 1
 S: 0 2   10000   10000      0 -10000  10000
 
-
-Output 2
----------------------------------------
-This mixer is empty.
-Z:
-
-
-Output 3
+Throttle of right wheels of rover on Output 2
 ---------------------------------------
 M: 1
-S: 0 3  10000  10000      0 -10000  10000
+S: 0 3    20000   20000      -10000  -10000  10000
+
+Throttle of left wheels of rover on Output 3
+---------------------------------------
+M: 1
+S: 0 3    20000   20000      -10000  -10000  10000
