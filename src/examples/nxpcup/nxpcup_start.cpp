@@ -141,8 +141,8 @@ void roverDifferentialControl(float speed, float steer, int fd)
 	dw = dw * (float)tan(steer) * wv / lw;
 
 	// Compute differential wheel velocity
-	wl = wv + (float)0.5 * dw;
-	wr = wv - (float)0.5 * dw;
+	wl = wv + 0.5F * dw;
+	wr = wv - 0.5F * dw;
 
 	// Mapping wheel velocity (rad/s) -> PWM
 	pwm_l = 1475 + (int)(RANGE * wl / max_wv);
@@ -163,7 +163,6 @@ int race_thread_main(int argc, char **argv)
 
 	/* Rover motor control variables */
 	roverControl motorControl;
-	// bool wait  = 1;
 
 	const char *dev = PWM_OUTPUT0_DEVICE_PATH;
 	int fd = px4_open(dev, 0);
@@ -194,21 +193,16 @@ int race_thread_main(int argc, char **argv)
 
 		pixy.getVersion();
 		pixy.version->print();
-		PX4_INFO("Pixy initialized\n");
+		pixy.changeProg("line_tracking");
 		pixy.setLamp(1, 0);
 		pixy.setLED(0, 255, 0);
-		//pixy.line.getAllFeatures(LINE_VECTOR, wait);
 		pixy.getResolution();
 		PX4_INFO("Resolution: (%u, %u)", pixy.frameWidth, pixy.frameHeight);
-
-		pixy.changeProg("line_tracking");
 
 		usleep(1000000);
 
 		while (1) {
 			safety_sub.copy(&safety);
-
-			// pixy.line.getAllFeatures(LINE_VECTOR, wait);
 
 			switch (safety.safety_off) {
 			case 0:
