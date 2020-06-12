@@ -44,10 +44,15 @@
 #include <string.h>
 #include <math.h>
 
-int x_origin = 39;
-int y_origin = 52;
+// Image size (x,y) -> (79,52) pixels
+const int x_left_origin = 19;
+const int x_right_origin = 60;
+const int y_origin = 52;
+
+const double vmax = 1.0;
+
 int count = 0;
-int count_stop = 100;
+const int count_stop = (int)(50 / vmax);
 
 int8_t res;
 
@@ -57,7 +62,8 @@ roverControl raceTrack(Pixy2 &pixy)
 {
 	roverControl control{};
 
-	float delta, norme;
+	float x0, x1, y0, y1, xe, ye;
+	float sign, u, x_origin, norme, delta;
 
 	res = pixy.line.getMainFeatures();
 
@@ -76,17 +82,33 @@ roverControl raceTrack(Pixy2 &pixy)
 
 	// Control information:
 	// speed: -1 (back) to +1 (front)
-	// speed: (m/s)
+	// speed: (m/s) current
 	// steering: -1 (left) to +1 (right)
-	// steering: rad -pi (left) to +pi (right)
+	// steering: rad -pi (left) to +pi (right) current
 
 	if (res & LINE_VECTOR) {
-		norme = sqrt(pow(pixy.line.vectors->m_x1 - x_origin, 2) + pow(pixy.line.vectors->m_y1 - y_origin, 2));
+		x0 = (float)pixy.line.vectors->m_x0;
+		x1 = (float)pixy.line.vectors->m_x1;
+		y0 = (float)(52 - pixy.line.vectors->m_y0);
+		y1 = (float)(52 - pixy.line.vectors->m_y1);
 
-		delta = acos(abs(pixy.line.vectors->m_y1 - y_origin) / norme);
-		delta = copysign(delta, pixy.line.vectors->m_x1 - x_origin);
+		sign = (y1 > y0) ? 1.0F : -1.0F;
+		u = sign * (x1 - x0) / (y1 - y0);
 
-		control.speed = 0.25 * cos(0.5F * delta);
+		ye = y_origin;
+		xe = x0 + u * (ye - y0);
+
+		PX4_INFO("u: %f", (double)u);
+		PX4_INFO("x1: %f", (double)x1);
+
+		x_origin = (pixy.line.vectors->m_x0 < 40) ? x_left_origin : x_right_origin;
+
+		norme = sqrt(pow(xe - x_origin, 2) + pow(ye, 2));
+
+		delta = acos(ye / norme);
+		delta = copysign(delta, xe - x_origin);
+
+		control.speed = vmax * cos(0.75F * delta);
 		control.steer = delta;
 
 		control_saved = control;

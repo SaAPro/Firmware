@@ -79,11 +79,11 @@ bool threadShouldExit = false;
 bool threadIsRunning = false;
 
 // Car geometry parameters
-float lw = 0.175; // distance between front and rear wheel axes
-float dw = 0.148; // distance between rear wheels
-float rw = 0.032; // radius of a wheel
-float max_wv = 30; // maximum wheel velocity (rad/s)
-float max_steer = M_PI_4_F; // maximum steering angle (rad)
+const float LW = 0.175; // distance between front and rear wheel axes
+const float DW = 0.148; // distance between rear wheels
+const float RW = 0.0325; // radius of a wheel
+const float MAX_WV = 100; // maximum wheel velocity (rad/s)
+const float MAX_STEER = M_PI_4_F; // maximum steering angle (rad)
 
 void roverSteering(float direction, int fd)
 {
@@ -122,34 +122,34 @@ void roverSpeed(float speed, int fd)
 void roverDifferentialControl(float speed, float steer, int fd)
 {
 	int pwm_s, pwm_l, pwm_r;
-	float wv, wl, wr;
+	float wv, dw, wl, wr;
 
 	// Add constraints on steering angle
-	if (steer > max_steer) { steer = max_steer; }
+	if (steer > MAX_STEER) { steer = MAX_STEER; }
 
-	if (steer < -max_steer) { steer = -max_steer; }
+	if (steer < -MAX_STEER) { steer = -MAX_STEER; }
 
 	// Wheel velocity
-	wv = speed / rw;
+	wv = speed / RW;
 
 	// Add constraints on wheel velocity
-	if (wv > max_wv) { wv = max_wv; }
+	if (wv > MAX_WV) { wv = MAX_WV; }
 
-	if (wv < -max_wv) { wv = -max_wv; }
+	if (wv < -MAX_WV) { wv = -MAX_WV; }
 
 	// Differential component for wheel velocity
-	dw = dw * (float)tan(steer) * wv / lw;
+	dw = wv * (float)tan(steer) * DW / LW;
 
 	// Compute differential wheel velocity
 	wl = wv + 0.5F * dw;
 	wr = wv - 0.5F * dw;
 
-	// Mapping wheel velocity (rad/s) -> PWM
-	pwm_l = 1475 + (int)(RANGE * wl / max_wv);
-	pwm_r = 1475 + (int)(RANGE * wr / max_wv);
+	// Mapping wheel velocity (rad/s) -> pwm
+	pwm_l = 1476 + (int)(2.9829F * wl);
+	pwm_r = 1476 + (int)(2.9829F * wr);
 
 	// Mapping steer angle (rad) -> PWM
-	pwm_s = 1000 - DIR * (int)(500 * steer / max_steer);
+	pwm_s = 1000 - DIR * (int)(500 * steer / MAX_STEER);
 
 	// Output to px4_ioctl
 	px4_ioctl(fd, PWM_SERVO_SET(1), pwm_s); // Motor 1 PWM (Steering)
