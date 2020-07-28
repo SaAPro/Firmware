@@ -121,6 +121,11 @@ void roverSpeed(float speed, int fd)
 
 void roverDifferentialControl(float speed, float steer, int fd)
 {
+	// The electronic differential control written below is taken from:
+	// Hartani, Kada & Bourahla, Mohamed & Miloud, Yahia & Sekour, Mohamed. (2009).
+	// Electronic Differential with Direct Torque Fuzzy Control for Vehicle Propulsion System.
+	// Turkish Journal of Electrical Engineering and Computer Sciences. 17.
+
 	int pwm_s, pwm_l, pwm_r;
 	float wv, dw, wl, wr;
 
