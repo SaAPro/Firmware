@@ -1,3 +1,55 @@
+# Construction de la voiture
+guide: https://nxp.gitbook.io/nxp-cup/developer-guide/assembly/dfrobot-chassis
+
+# Installation Ubuntu
+guide installation: https://nxp.gitbook.io/nxp-cup/developer-guide/development-tools/rddrone-fmuk66-development/px4-toolchain
+**!Attention a cloner ce répertoire https://github.com/SaAPro/Firmware.git au lieu du répertoire officiel donné dans le tutoriel**
+
+# Installation Windows
+guide installation: https://dev.px4.io/master/en/setup/dev_env_windows_cygwin.html
+
+## installation personnelle
+### installer PX4 Cygwin Toolchain
+1. télécharger Cygwin Toolchain from https://github.com/PX4/windows-toolchain/releases
+2. exécuter l'application (accepter les risques) et installer la Toolchain (prendre les choix par défauts) **!besoin des droits admin !ne pas cloner le répertoire git directement**
+4. ouvrir l'explorateur de fichier, aller à C:/PX4/ et lancer run-console (double cliquer)
+5. dans la console, exécuter les commandes suivantes:
+``` bash
+git clone --recursive -j8 https://github.com/SaAPro/Firmware.git
+cd Firmware/
+git checkout nxpcup
+```
+6. on make pour voir si tout fonctionne bien: ``` bash make nxp_fmuk66-v3_default``` (des messages vont apparaître, taper "u" et"Entrée" comme indiqué)
+
+## installation système GreenEr
+### installer PX4 Cygwin Toolchain
+guide installation: https://dev.px4.io/master/en/setup/dev_env_windows_cygwin.html
+1. télécharger Cygwin Toolchain from https://github.com/PX4/windows-toolchain/releases
+2. exécuter l'application (accepter les risques) et installer la Toolchain (prendre les choix par défauts) !besoin des droits admin
+3. donner les droits en modification pour les utilisateurs sur le répertoire C:/PX4
+
+### installer Visual Studio Code
+https://code.visualstudio.com/ **!Prendre l'installation système**
+
+# Explication/Modifications du code
+guide: https://nxp.gitbook.io/nxp-cup/developer-guide/development-tools/rddrone-fmuk66-development/commissioning-the-rddrone-fmuk66/the-example-application
+
+Le code à modifier se trouve en majorité sous le répertoire Firmware/src/examples/nxpcup. Les deux fichiers principaux sont nxpcup_start.cpp et nxpcup_race.cpp.
+Note: à l'heure actuelle, l'utilisation des PWMs en input pour pouvoir lire des encodeurs est difficile et reste à faire. Le contrôle se fait donc en boucle ouverte.
+
+* nxpcup_start.cpp: lance l'application et assure la boucle de contrôle qui récupère les données de la PixCam, les passe à raceTrack() qui renvoie une commande en vitesse et une commande en angle qui sont ensuite envoyées au contrôle différentiel qui génère les PWMs.
+* nxpcup_race.cpp: définition de la fonction raceTrack() -> génération de la consigne de vitesse et de l'angle d'attaque en fonction des valeurs retournées par l'objet pixy
+* FMU boot management: Firmware/ROMFS/px4fmu_common/init.d/rcS
+* Mixer:
+
+# Compilation & Upload sur Flight Management Unit
+```bash
+cd Firmware/
+make nxp_fmuk66-v3_default
+make nxp_fmuk66-v3_default upload
+```
+**!si un quelconque problème apparait sur le make, faire un make distclean et ré-exécuter la commande make ci-dessus(taper "Entrée" si la console est bloquée)**
+
 # PX4 Drone Autopilot
 
 [![Releases](https://img.shields.io/github/release/PX4/Firmware.svg)](https://github.com/PX4/Firmware/releases) [![DOI](https://zenodo.org/badge/22634/PX4/Firmware.svg)](https://zenodo.org/badge/latestdoi/22634/PX4/Firmware)
